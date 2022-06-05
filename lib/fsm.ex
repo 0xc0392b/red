@@ -1,3 +1,16 @@
+defmodule TransitionError do
+  @moduledoc """
+  Transition function tried to move to a state
+  outside of its "to" list.
+  """
+
+  defexception [:from, :to, :allowed]
+
+  def message(%{from: from, to: to, allowed: allowed}) do
+    "invalid transition #{from} -> #{to}, allowed: #{allowed}"
+  end
+end
+
 defmodule State do
   @moduledoc """
   Template for a state.
@@ -11,6 +24,7 @@ defmodule State do
 
   defmacro __using__(id: id, to: to, substates: substates) do
     quote bind_quoted: [id: id, to: to, substates: substates] do
+      @behaviour State
       @id id
       @to to
       @substates substates
@@ -25,30 +39,12 @@ defmodule Machine do
 
   defmacro __using__(name: name, states: states) do
     quote bind_quoted: [name: name, states: states] do
-      use GenServer
-
       import Machine
+
+      use GenServer
 
       @name name
       @states states
-
-      # build and inline transition matrix at compile-time
-      @before_compile Machine
-
-      defp transition([], input), do: {:error, input}
-
-      defp transition([state | remaining], input) do
-        # transition on given input
-        case state.transition(input, ctx) do
-          # successful transition
-          {:ok, next_state} ->
-            {:ok, {next_state, state.output(input, ctx)}}
-
-          # error on (state, input)
-          :error ->
-            {:error, {state, input}}
-        end
-      end
 
       def start_link(ctx) do
         GenServer.start_link(__MODULE__, ctx)
@@ -60,11 +56,28 @@ defmodule Machine do
 
       # handle event messages
       def handle_call({:event, state_id, input}, _, ctx) do
-        # the set of possible destination states
-        possible_states = @matrix[state_id]
+        # pick the state
+        state = @states[state_id]
 
-        # try to resolve
-        transition(possible_states, input)
+        # transition on given input
+        case state.transition(input, ctx) do
+          # successful transition if the next state is allowed
+          # otherwise raise TransitionError
+          {:ok, next_state} ->
+            if next_state not in state.to do
+              raise TransitionError,
+                from: state_id,
+                to: next_state,
+                allowed: state.to
+            else
+              {:ok, {next_state, state.output(input, ctx)}}
+            end
+
+          # the transition function returned an error on
+          # the given input
+          :error ->
+            {:error, {state, input}}
+        end
       end
 
       # handle routine messages
@@ -88,29 +101,6 @@ defmodule Machine do
       def routine(machine, routine_name, input) do
         GenServer.call(machine, {:routine, routine_name, input})
       end
-    end
-  end
-
-  defmacro __before_compile__(_env) do
-    matrix =
-      for state <- @states do
-        from = state.id
-
-        # TODO
-        # this needs to be recursive
-        # constructed inner-mode -> outer-most
-        first_try = for dest in state.substates, do: dest.id
-
-        # out-going edges
-        then_try = for dest in state.to, do: dest.id
-        to = first_try ++ then_try
-
-        {from, to}
-      end
-      |> Enum.into(%{})
-
-    quote bind_quoted: [matrix: matrix] do
-      @matrix = matrix
     end
   end
 

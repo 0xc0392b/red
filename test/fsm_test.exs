@@ -64,9 +64,9 @@ defmodule FSMTest.Machine do
   use Machine,
     name: :test_machine,
     states: [
-      FSMTest.State.A,
-      FSMTest.State.B,
-      FSMTest.State.C
+      a: FSMTest.State.A,
+      b: FSMTest.State.B,
+      c: FSMTest.State.C
     ]
 
   routine "12345" do
