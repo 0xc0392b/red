@@ -3,29 +3,17 @@ defmodule State do
   Template for a state.
   """
 
+  # state transition function
+  @callback transition(any(), any()) :: {:ok, atom()} | :error
+
+  # transition output function
+  @callback output(any(), any()) :: any()
+
   defmacro __using__(id: id, to: to, substates: substates) do
     quote bind_quoted: [id: id, to: to, substates: substates] do
-      import State
-
       @id id
       @to to
       @substates substates
-    end
-  end
-
-  defmacro transition(do: block) do
-    quote do
-      def transition({:event, input}) do
-        unquote(block)
-      end
-    end
-  end
-
-  defmacro output(do: block) do
-    quote do
-      def output({:event, input}) do
-        unquote(block)
-      end
     end
   end
 end
@@ -36,45 +24,25 @@ defmodule Machine do
   """
 
   defmacro __using__(name: name, states: states) do
-    # build transition matrix at compile-time
-    # ...
-
-    quote do
+    quote bind_quoted: [name: name, states: states] do
       use GenServer
 
-      # inline the matrix
-      # ...
+      import Machine
 
-      defp transition(state, input) do
-        # do work here
-        # ...
+      @name name
+      @states states
 
-        :error
-      end
+      # build and inline transition matrix at compile-time
+      @before_compile Machine
 
-      defp output(state, input) do
-        # do work here
-        # ...
+      defp transition([], input), do: {:error, input}
 
-        :none
-      end
-
-      def start_link(init_arg) do
-        GenServer.start_link(__MODULE__, init_arg)
-      end
-
-      def init(init_arg) do
-        {:ok, init_arg}
-      end
-
-      def handle_call({:event, state_id, input}, _, init_arg) do
-        # pick state
-        # ...
-
-        case transition(state, input) do
+      defp transition([state | remaining], input) do
+        # transition on given input
+        case state.transition(input, ctx) do
           # successful transition
           {:ok, next_state} ->
-            {:ok, {next_state, output(state, input)}}
+            {:ok, {next_state, state.output(input, ctx)}}
 
           # error on (state, input)
           :error ->
@@ -82,7 +50,25 @@ defmodule Machine do
         end
       end
 
-      def handle_call({:routine, routine_name, input}, _, init_arg) do
+      def start_link(ctx) do
+        GenServer.start_link(__MODULE__, ctx)
+      end
+
+      def init(ctx) do
+        {:ok, ctx}
+      end
+
+      # handle event messages
+      def handle_call({:event, state_id, input}, _, ctx) do
+        # the set of possible destination states
+        possible_states = @matrix[state_id]
+
+        # try to resolve
+        transition(possible_states, input)
+      end
+
+      # handle routine messages
+      def handle_call({:routine, routine_name, input}, _, ctx) do
         # do work here
         # ...
 
@@ -102,6 +88,29 @@ defmodule Machine do
       def routine(machine, routine_name, input) do
         GenServer.call(machine, {:routine, routine_name, input})
       end
+    end
+  end
+
+  defmacro __before_compile__(_env) do
+    matrix =
+      for state <- @states do
+        from = state.id
+
+        # TODO
+        # this needs to be recursive
+        # constructed inner-mode -> outer-most
+        first_try = for dest in state.substates, do: dest.id
+
+        # out-going edges
+        then_try = for dest in state.to, do: dest.id
+        to = first_try ++ then_try
+
+        {from, to}
+      end
+      |> Enum.into(%{})
+
+    quote bind_quoted: [matrix: matrix] do
+      @matrix = matrix
     end
   end
 
