@@ -1,3 +1,13 @@
+defmodule TransactionLog do
+  @moduledoc """
+  ...
+  """
+
+  # operator should log the outcome of each
+  # state transition to some storage backend
+  # ...
+end
+
 defmodule Operator do
   @moduledoc """
   ...
