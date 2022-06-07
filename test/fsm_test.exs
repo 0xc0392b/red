@@ -15,7 +15,7 @@ defmodule FSMTest.State.A do
   end
 
   @impl true
-  def output(input, _), do: input
+  def output(input, _), do: input + 1
 end
 
 # example state B
@@ -36,7 +36,7 @@ defmodule FSMTest.State.B do
   end
 
   @impl true
-  def output(input, _), do: input
+  def output(input, _), do: input + 2
 end
 
 # example state C
@@ -49,7 +49,6 @@ defmodule FSMTest.State.C do
   @impl true
   def transition(input, _) do
     cond do
-      input < 10 -> :error
       input > 30 -> :error
       rem(input, 2) == 0 -> {:ok, :c}
       rem(input, 2) != 0 -> {:ok, :a}
@@ -57,7 +56,7 @@ defmodule FSMTest.State.C do
   end
 
   @impl true
-  def output(input, _), do: input
+  def output(input, _), do: input + 3
 end
 
 # example machine
@@ -70,21 +69,21 @@ defmodule FSMTest.Machine do
       c: FSMTest.State.C
     ]
 
-  routine "12345" do
-    # ...
-  end
+  routine(:testing_1,
+    steps: [
+      :a,
+      :b,
+      :c
+    ]
+  )
 
-  routine "123a" do
-    # ...
-  end
-
-  routine "even numbers" do
-    # ...
-  end
-
-  routine "odd numbers" do
-    # ...
-  end
+  routine(:testing_2,
+    steps: [
+      :a,
+      :a,
+      :b
+    ]
+  )
 end
 
 # test FSM with the above states
@@ -98,17 +97,17 @@ defmodule FSMTest.MachineTest do
 
     outcomes =
       for [in: input, out: expect_output] <- [
-            [in: {:a, 1}, out: {:b, 1}],
-            [in: {:a, 2}, out: {:a, 2}],
-            [in: {:b, 1}, out: {:b, 1}],
-            [in: {:b, 2}, out: {:c, 2}],
-            [in: {:c, 12}, out: {:c, 12}],
-            [in: {:c, 15}, out: {:a, 15}]
+            [in: {:a, 1}, out: {:b, 2}],
+            [in: {:a, 2}, out: {:a, 3}],
+            [in: {:b, 1}, out: {:b, 3}],
+            [in: {:b, 2}, out: {:c, 4}],
+            [in: {:c, 12}, out: {:c, 15}],
+            [in: {:c, 15}, out: {:a, 18}]
           ] do
         {input_state, input_value} = input
         {expect_state, expect_value} = expect_output
 
-        {:ok, {next_state, output}} =
+        {:ok, {next_state, output_value}} =
           FSMTest.Machine.event(
             pid,
             input_state,
@@ -116,16 +115,44 @@ defmodule FSMTest.MachineTest do
           )
 
         next_state == expect_state and
-          output == expect_value
+          output_value == expect_value
       end
 
     assert Enum.all?(outcomes)
   end
 
   test "testing pre-defined routines" do
-    # do work here
-    # ...
+    ctx = %{"some" => "context"}
 
-    true
+    outcomes =
+      for {routine, initial_input, expected_outputs} <- [
+            {:testing_1, 1, [{:a, 1}, {:b, 2}, {:c, 4}, 7]},
+            {:testing_2, 2, [{:a, 2}, {:a, 3}, {:b, 4}, 6]}
+          ] do
+        {:ok, pid} = FSMTest.Machine.start_link(ctx)
+
+        {chain_fn_1, output_1} =
+          FSMTest.Machine.routine(
+            pid,
+            routine,
+            initial_input
+          )
+
+        # do step 1
+        {:next, {chain_fn_2, output_2}} = chain_fn_1.()
+
+        # do step 2
+        {:next, {chain_fn_3, output_3}} = chain_fn_2.()
+
+        # do step 3
+        {:halt, {:done, output_4}} = chain_fn_3.()
+
+        output_1 == Enum.at(expected_outputs, 0) and
+          output_2 == Enum.at(expected_outputs, 1) and
+          output_3 == Enum.at(expected_outputs, 2) and
+          output_4 == Enum.at(expected_outputs, 3)
+      end
+
+    assert Enum.all?(outcomes)
   end
 end
