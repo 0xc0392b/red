@@ -205,10 +205,10 @@ defmodule Machine do
 
         # pick the routine, making sure it exists
         routine =
-          if function_exported?(__MODULE__, routine_name, 0) do
-            true -> apply(__MODULE__, routine_name, [])
+          if not function_exported?(__MODULE__, routine_name, 0) do
+            raise NoSuchRoutineError, name: routine_name
           else
-            false -> raise NoSuchRoutineError, name: routine_name
+            apply(__MODULE__, routine_name, [])
           end
 
         # begin the routine's chain of state transitions
