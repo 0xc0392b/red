@@ -10,21 +10,56 @@ end
 
 defmodule ReplicatedStateMachine do
   @moduledoc """
-  ...
+  Template for a replicated state machine.
+  This module essentially brings everything together.
+  Users are expected to provide a unique name for each
+  participant replicating the machine in the cluster, as
+  well as a finite state machine and starting state.
   """
 
-  # distributed operator
-  # ...
+  @doc false
+  defmacro __using__(
+             name: name,
+             fsm: fsm,
+             start_state: start_state
+           ) do
+    quote do
+      use GenServer
 
-  # broadcast network
-  # ...
+      use Operator,
+        fsm: fsm,
+        start_state: start_state
 
-  # paxos
-  # ...
+      import Paxos
+      import Network
+      import BasicBroadcast
+      import TransactionLog
 
-  # transaction log
-  # ...
+      @name name
+      @participants participants
 
-  # finite state machine
-  # ...
+      def start_link(ctx) do
+        GenServer.start_link(__MODULE__, ctx)
+      end
+
+      def init(ctx) do
+        {:ok, ctx}
+      end
+
+      # operator
+      # ...
+
+      # broadcast network
+      # ...
+
+      # paxos
+      # ...
+
+      # transaction log
+      # ...
+
+      # finite state machine
+      # ...
+    end
+  end
 end

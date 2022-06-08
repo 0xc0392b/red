@@ -33,7 +33,7 @@ defmodule Network do
   Called when a process wants to join the network.
   They must provide a unique name and their pid.
   """
-  def join(network, name, pid) do
+  def join(name, pid) do
     # Agent.update(...)
     # ...
 
@@ -43,7 +43,7 @@ defmodule Network do
   @doc """
   Calls when a process wants to leave the network.
   """
-  def leave(network, name) do
+  def leave(name) do
     # Agent.update(...)
     # ...
 
@@ -62,7 +62,7 @@ defmodule Network do
   @doc """
   Return the current list of participant names.
   """
-  def participants(network) do
+  def participants() do
     # Agent.get(...)
     # ...
     []
@@ -99,8 +99,8 @@ defmodule BasicBroadcast do
   @doc """
   ...
   """
-  def broadcast(network, message) do
-    for participant <- participants(network) do
+  def broadcast(message) do
+    for participant <- participants() do
       send_message(participant, message)
     end
   end

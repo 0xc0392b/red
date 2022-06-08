@@ -279,7 +279,7 @@ defmodule Operator do
         # get the machine's pid
         pid = Agent.get(operator, fn ctx -> ctx[:fsm_pid] end)
 
-        # ...
+        # execute the event
         case @fsm.event(pid, current_state(operator), input) do
           # successful transition
           {:ok, {next_state, output_value}} ->
