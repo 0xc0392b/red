@@ -222,7 +222,7 @@ defmodule Machine do
   to the module's list of routines.
   """
   defmacro routine(name, steps: steps) do
-    routine_name = String.to_atom("routine_#{name}")
+    routine_name = :"routine_#{name}"
 
     quote do
       def unquote(routine_name)(), do: unquote(steps)
@@ -238,7 +238,7 @@ defmodule Operator do
 
   @doc false
   defmacro __using__(fsm: fsm, start_state: start_state) do
-    quote location: :keep, bind_quoted: [fsm: fsm, start_state: start_state] do
+    quote bind_quoted: [fsm: fsm, start_state: start_state] do
       use Agent
 
       @fsm fsm
