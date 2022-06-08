@@ -29,8 +29,6 @@ defmodule Network do
   ...
   """
 
-  use Agent
-
   @doc """
   Called when a process wants to join the network.
   They must provide a unique name and their pid.
@@ -95,6 +93,7 @@ defmodule BasicBroadcast do
   ...
   """
 
+  import Network
   import PeerToPeer
 
   @doc """

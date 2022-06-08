@@ -229,3 +229,70 @@ defmodule Machine do
     end
   end
 end
+
+defmodule Operator do
+  @moduledoc """
+  Template for an operator. Must be provided a finite state
+  machine and a starting state.
+  """
+
+  @doc false
+  defmacro __using__(fsm: fsm, start_state: start_state) do
+    quote location: :keep, bind_quoted: [fsm: fsm, start_state: start_state] do
+      use Agent
+
+      @fsm fsm
+      @start_state start_state
+
+      defp updated_state(operator, next_state) do
+        :ok =
+          Agent.update(
+            operator,
+            fn ctx -> %{ctx | current_state: next_state} end
+          )
+
+        next_state
+      end
+
+      def start_link(ctx) do
+        # start the machine
+        {:ok, pid} = @fsm.start_link(ctx)
+
+        # set the agent's state to (fsm pid, start state)
+        Agent.start_link(fn ->
+          %{
+            fsm_pid: pid,
+            current_state: @start_state
+          }
+        end)
+      end
+
+      @doc """
+      Return's the operator's current state.
+      """
+      def current_state(operator) do
+        Agent.get(operator, fn ctx -> ctx[:current_state] end)
+      end
+
+      @doc """
+      Send an event to the machine and update the
+      operator's current state accordingly.
+      """
+      def handle_input(operator, input) do
+        # get the machine's pid
+        pid = Agent.get(operator, fn ctx -> ctx[:fsm_pid] end)
+
+        # ...
+        case @fsm.event(pid, current_state(operator), input) do
+          # successful transition
+          {:ok, {next_state, output_value}} ->
+            {:ok, {updated_state(operator, next_state), output_value}}
+
+          # error on input
+          {:error, output} ->
+            {:error, output}
+        end
+      end
+    end
+  end
+end

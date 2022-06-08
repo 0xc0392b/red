@@ -86,6 +86,16 @@ defmodule FSMTest.Machine do
   )
 end
 
+# example machine operator
+defmodule FSMTest.Operator do
+  use Operator,
+    fsm: FSMTest.Machine,
+    start_state: :a
+
+  # put helper functions here
+  # ...
+end
+
 # test FSM with the above states
 defmodule FSMTest.MachineTest do
   use ExUnit.Case
@@ -154,5 +164,41 @@ defmodule FSMTest.MachineTest do
       end
 
     assert Enum.all?(outcomes)
+  end
+end
+
+# create an operator with the test machine
+defmodule FSMTest.OperatorTest do
+  use ExUnit.Case
+  doctest Operator
+
+  test "create example operator" do
+    ctx = %{"some" => "context"}
+
+    # create operator
+    {:ok, pid} = FSMTest.Operator.start_link(ctx)
+
+    # check current state
+    current_state = FSMTest.Operator.current_state(pid)
+
+    assert current_state == :a
+  end
+
+  test "operator's state is updated correctly" do
+    ctx = %{"some" => "context"}
+
+    # create operator
+    {:ok, pid} = FSMTest.Operator.start_link(ctx)
+
+    # input "1", check new state
+    {:ok, {next_state, output_value}} =
+      FSMTest.Operator.handle_input(
+        pid,
+        1
+      )
+
+    assert output_value == 2 and
+             next_state == :b and
+             FSMTest.Operator.current_state(pid) == :b
   end
 end
