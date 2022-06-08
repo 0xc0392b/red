@@ -244,14 +244,11 @@ defmodule Operator do
       @fsm fsm
       @start_state start_state
 
-      defp updated_state(operator, next_state) do
-        :ok =
-          Agent.update(
-            operator,
-            fn ctx -> %{ctx | current_state: next_state} end
-          )
-
-        next_state
+      defp set_state(operator, next_state) do
+        Agent.update(
+          operator,
+          fn ctx -> %{ctx | current_state: next_state} end
+        )
       end
 
       def start_link(ctx) do
@@ -286,7 +283,8 @@ defmodule Operator do
         case @fsm.event(pid, current_state(operator), input) do
           # successful transition
           {:ok, {next_state, output_value}} ->
-            {:ok, {updated_state(operator, next_state), output_value}}
+            :ok = set_state(operator, next_state)
+            {:ok, {next_state, output_value}}
 
           # error on input
           {:error, output} ->
