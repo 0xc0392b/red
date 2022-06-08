@@ -265,7 +265,7 @@ defmodule Operator do
       end
 
       @doc """
-      Return's the operator's current state.
+      Return the operator's current state.
       """
       def current_state(operator) do
         Agent.get(operator, fn ctx -> ctx[:current_state] end)
