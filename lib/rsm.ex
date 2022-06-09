@@ -24,8 +24,6 @@ defmodule ReplicatedStateMachine do
              start_state: start_state
            ) do
     quote do
-      use GenServer
-
       use Operator,
         fsm: fsm,
         start_state: start_state
@@ -37,14 +35,6 @@ defmodule ReplicatedStateMachine do
 
       @name name
       @participants participants
-
-      def start_link(ctx) do
-        GenServer.start_link(__MODULE__, ctx)
-      end
-
-      def init(ctx) do
-        {:ok, ctx}
-      end
 
       # operator
       # ...

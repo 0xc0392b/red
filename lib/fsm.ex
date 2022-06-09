@@ -99,6 +99,8 @@ defmodule Machine do
     quote bind_quoted: [name: name, states: states] do
       import Machine
 
+      # TODO
+      # can use agent here instead
       use GenServer
 
       @machine_name name
