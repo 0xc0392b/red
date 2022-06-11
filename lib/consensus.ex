@@ -1,3 +1,22 @@
+defmodule ConsensusModule do
+  @moduledoc """
+  ...
+  """
+
+  use GenServer
+
+  def start_link(participants) do
+    GenServer.start_link(__MODULE__, participants)
+  end
+
+  def init(participants) do
+    {:ok, participants}
+  end
+
+  # do work here
+  # ...
+end
+
 defmodule Paxos.Accepted do
   @moduledoc """
   A struct that represents a pair (accepted value, ballot it was
@@ -79,21 +98,25 @@ defmodule Paxos.Processor do
   All messages are prefixed with their recipient's role. This allows
   a Paxos.Processor to distinguish and forward them to the correct
   destination processes.
+
   ### Client
   The "client" interacts with the Paxos network. In this system, the
   client is provided in the form of two functions: propose and
   start_ballot. These are essentially the "API" of the Paxos subsystem,
   which is used by processes higher-up in the supervision tree.
+
   ### Learner
   The "learner" is informed when an agreement is made and a value is
   decided. In this system, the learner is the parent process "upper"
   who will receive the message {:decide, value} whenever a value
   is decided.
+
   ### Proposer
   A "proposer" receives values from the client and proposes them to
   the current leader (who is also a proposer). The leader handles
   most of the Paxos algorithm. In this system there are no proposers.
   The description for "Leader" explains this design choice.
+
   ### Leader
   A "leader" is simply a distinguished proposer. They create a new
   ballot and broadcast it to the acceptors, trying to achieve a
@@ -103,6 +126,7 @@ defmodule Paxos.Processor do
   proposers and leaders are the exact same thing. This is why a
   Paxos.Processor has no "proposer" and only a "leader" child process,
   which is a GenServer similar to Paxos.Role.Acceptor.
+
   ### Acceptor
   The "acceptors" act as the distributed fault-tolerant memory of the
   Paxos network. In this system, acceptors run as child processes to
@@ -325,6 +349,7 @@ defmodule Paxos.Role.Leader do
   GenServer. Performs the role of a Paxos "leader" - a distinguished
   proposer. Receives and responds to messages from multiple Acceptors
   in this Paxos network.
+
   A Leader's initial state consists of:
   - a nil current value (which is updated by set_value);
   - no received promise or accept messages;
@@ -332,13 +357,16 @@ defmodule Paxos.Role.Leader do
     and broadcasting messages;
   - the name of the processor and total number of participants;
   - a last known ballot with the number zero.
+
   Leader receive these messages:
   - {:promise, ballot, last_accepted}
   - {:accept, ballot, value}
+
   Send these messages:
   - {:to_learners, {:decide, value}}
   - {:to_acceptors, {:prepare, ballot, :name}}
   - {:to_acceptors, {:propose, ballot, value, :name}}
+
   And have the following asynchronous API:
   - send_prepare(leader)
   - set_value(leader, value)

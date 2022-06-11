@@ -91,9 +91,6 @@ defmodule FSMTest.Operator do
   use Operator,
     fsm: FSMTest.Machine,
     start_state: :a
-
-  # put helper functions here
-  # ...
 end
 
 # test FSM with the above states
