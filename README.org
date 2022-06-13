@@ -1,0 +1,22 @@
+#+TITLE:  red
+#+AUTHOR: William Santos
+#+EMAIL:  w@wsantos.net
+
+#+ID:               red
+#+LANGUAGE:         en
+#+STARTUP:          showall
+#+EXPORT_FILE_NAME: red
+
+
+Replicated state machine programming framework for Elixir
+
+** finished
+1. finite state machine
+2. consensus module (paxos)
+
+
+** work in progress
+1. distributed log
+2. backend storage for log (persistent)
+3. replicated state machine
+4. tests for all of the above

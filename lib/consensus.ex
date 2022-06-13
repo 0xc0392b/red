@@ -98,41 +98,6 @@ defmodule Paxos.Processor do
   All messages are prefixed with their recipient's role. This allows
   a Paxos.Processor to distinguish and forward them to the correct
   destination processes.
-
-  ### Client
-  The "client" interacts with the Paxos network. In this system, the
-  client is provided in the form of two functions: propose and
-  start_ballot. These are essentially the "API" of the Paxos subsystem,
-  which is used by processes higher-up in the supervision tree.
-
-  ### Learner
-  The "learner" is informed when an agreement is made and a value is
-  decided. In this system, the learner is the parent process "upper"
-  who will receive the message {:decide, value} whenever a value
-  is decided.
-
-  ### Proposer
-  A "proposer" receives values from the client and proposes them to
-  the current leader (who is also a proposer). The leader handles
-  most of the Paxos algorithm. In this system there are no proposers.
-  The description for "Leader" explains this design choice.
-
-  ### Leader
-  A "leader" is simply a distinguished proposer. They create a new
-  ballot and broadcast it to the acceptors, trying to achieve a
-  quorum: more than half of the acceptors respond with a promise.
-  In this system, all proposers have the capacity to be a leader at
-  any point in time. From an architectural perspective, this means
-  proposers and leaders are the exact same thing. This is why a
-  Paxos.Processor has no "proposer" and only a "leader" child process,
-  which is a GenServer similar to Paxos.Role.Acceptor.
-
-  ### Acceptor
-  The "acceptors" act as the distributed fault-tolerant memory of the
-  Paxos network. In this system, acceptors run as child processes to
-  a Paxos.Processor. They are implemented as GenServers: they expose an
-  API and maintain their own local state. They send messages using a
-  Paxos.Network and receive messages from a Paxos.Processor.
   """
 
   use GenServer
@@ -141,11 +106,6 @@ defmodule Paxos.Processor do
   Start the GenServer. Takes a processor name, the list of participants
   in the network, and the PID of the parent process. Registers the name
   of the processor with the GenServer's PID in the global registry.
-  Ideally this would be a start_link so that the Paxos subsystem would
-  fit correctly into an OTP supervision tree. However, the assignment
-  tests expect a start/3 function that returns a PID and not {:ok, pid}.
-  Also, linking a Paxos.Processor to the parent process breaks the
-  tests when they begin simulating node "crashes".
   """
   def start(name, participants, upper) do
     {:ok, pid} =
