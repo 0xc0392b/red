@@ -11,8 +11,8 @@
 Replicated state machine programming framework for Elixir
 
 ** finished
-1. finite state machine
-2. consensus module (paxos)
+1. finite state machine abstractions
+2. consensus module components (paxos)
 
 
 ** work in progress
