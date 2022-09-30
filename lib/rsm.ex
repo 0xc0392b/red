@@ -1,6 +1,6 @@
 defmodule StorageBackend do
   @moduledoc """
-  ...
+  Defines a
   """
 
   # start and link to parent process

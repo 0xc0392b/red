@@ -8,13 +8,17 @@ defmodule FSMTest.State.A do
   @impl true
   def transition(input, _) do
     cond do
+      # when input > 10 transition to error state
       input > 10 -> :error
+      # when input is even transition to state a
       rem(input, 2) == 0 -> {:ok, :a}
+      # when input is odd transition to state b
       rem(input, 2) != 0 -> {:ok, :b}
     end
   end
 
   @impl true
+  # add 1 to input on successful transition
   def output(input, _), do: input + 1
 end
 
@@ -28,14 +32,19 @@ defmodule FSMTest.State.B do
   @impl true
   def transition(input, _) do
     cond do
+      # when input > 20 transition to error state
       input > 20 -> :error
-      rem(input, 2) != 0 -> {:ok, :b}
+      # when input is even transition to state c
       rem(input, 2) == 0 -> {:ok, :c}
+      # when input is odd transition to state b
+      rem(input, 2) != 0 -> {:ok, :b}
+      # when input is 420 transition to state x
       input == 420 -> {:ok, :x}
     end
   end
 
   @impl true
+  # add 2 to input on successful transition
   def output(input, _), do: input + 2
 end
 
@@ -49,17 +58,21 @@ defmodule FSMTest.State.C do
   @impl true
   def transition(input, _) do
     cond do
+      # when input > 30 transition to error state
       input > 30 -> :error
+      # when input is even transition to state c
       rem(input, 2) == 0 -> {:ok, :c}
+      # when input is odd transition to state a
       rem(input, 2) != 0 -> {:ok, :a}
     end
   end
 
   @impl true
+  # add 3 to input on successful transition
   def output(input, _), do: input + 3
 end
 
-# example machine
+# example machine with two routines
 defmodule FSMTest.Machine do
   use Machine,
     name: :test_machine,
@@ -69,20 +82,14 @@ defmodule FSMTest.Machine do
       c: FSMTest.State.C
     ]
 
+  # a -> b -> c
   routine(:testing_1,
-    steps: [
-      :a,
-      :b,
-      :c
-    ]
+    steps: [:a, :b, :c]
   )
 
+  # a -> a -> b
   routine(:testing_2,
-    steps: [
-      :a,
-      :a,
-      :b
-    ]
+    steps: [:a, :a, :b]
   )
 end
 
