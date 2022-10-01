@@ -99,27 +99,32 @@ defmodule Machine do
     quote bind_quoted: [name: name, states: states] do
       import Machine
 
-      # TODO
-      # can use agent here instead
-      use GenServer
+      use Agent
 
       @machine_name name
       @states states
 
-      def name do
-        @machine_name
-      end
-
       def start_link(ctx) do
-        GenServer.start_link(__MODULE__, ctx)
+        Agent.start_link(fn -> ctx end)
       end
 
-      def init(ctx) do
-        {:ok, ctx}
-      end
+      # return the machine's name
+      def name, do: @machine_name
 
-      # handle event messages
-      def handle_call({:event, state, input}, _, ctx) do
+      @doc """
+      Send a single event to the machine.
+      """
+      def event(machine, state_id, input) do
+        # get the machine's context
+        ctx = Agent.get(machine, fn ctx -> ctx end)
+
+        # pick the state, making sure it exists
+        state =
+          case @states[state_id] do
+            nil -> raise NoSuchStateError, state_id: state_id
+            state -> state
+          end
+
         # transition on given input
         outcome =
           case state.transition(input, ctx) do
@@ -141,29 +146,15 @@ defmodule Machine do
               {:error, {state.id, input}}
           end
 
-        # respond to the caller
-        {:reply, outcome, ctx}
-      end
-
-      @doc """
-      Send a single event to the machine.
-      """
-      def event(machine, state_id, input) do
-        # pick the state, making sure it exists
-        state =
-          case @states[state_id] do
-            nil -> raise NoSuchStateError, state_id: state_id
-            state -> state
-          end
-
-        GenServer.call(machine, {:event, state, input})
+        # the outcome of the event
+        outcome
       end
 
       @doc """
       Chain multiple events together, starting with an
       initial input.
       """
-      def chain_events(machine, input, [step | remaining]) do
+      def events(machine, input, [step | remaining]) do
         # the chain function actually triggers the event
         # and continues the chain until halt
         chain_fn = fn ->
@@ -182,7 +173,7 @@ defmodule Machine do
                     next_state: next_state,
                     remaining: remaining
                 else
-                  {:next, chain_events(machine, output, remaining)}
+                  {:next, events(machine, output, remaining)}
                 end
               else
                 # halt when finished routine
@@ -203,6 +194,7 @@ defmodule Machine do
       Call a pre-defined routine on a given input.
       """
       def routine(machine, name, input) do
+        # the routine's full name
         routine_name = :"routine_#{name}"
 
         # pick the routine, making sure it exists
@@ -214,7 +206,7 @@ defmodule Machine do
           end
 
         # begin the routine's chain of state transitions
-        chain_events(machine, input, routine)
+        events(machine, input, routine)
       end
     end
   end
@@ -224,6 +216,7 @@ defmodule Machine do
   to the module's list of routines.
   """
   defmacro routine(name, steps: steps) do
+    # the routine's full name
     routine_name = :"routine_#{name}"
 
     quote do
@@ -246,13 +239,6 @@ defmodule Operator do
       @fsm fsm
       @start_state start_state
 
-      defp set_state(operator, next_state) do
-        Agent.update(
-          operator,
-          fn ctx -> %{ctx | current_state: next_state} end
-        )
-      end
-
       def start_link(ctx) do
         # start the machine
         {:ok, pid} = @fsm.start_link(ctx)
@@ -266,6 +252,13 @@ defmodule Operator do
         end)
       end
 
+      defp set_state(operator, next_state) do
+        Agent.update(
+          operator,
+          fn ctx -> %{ctx | current_state: next_state} end
+        )
+      end
+
       @doc """
       Return the operator's current state.
       """
@@ -277,13 +270,16 @@ defmodule Operator do
       Send an event to the machine and update the
       operator's current state accordingly.
       """
-      def handle_input(operator, input) do
+      def input(operator, input) do
         # get the machine's pid
-        pid = Agent.get(operator, fn ctx -> ctx[:fsm_pid] end)
+        machine = Agent.get(operator, fn ctx -> ctx[:fsm_pid] end)
+
+        # the machine's current state
+        state = current_state(operator)
 
         # execute the event
-        case @fsm.event(pid, current_state(operator), input) do
-          # successful transition
+        case @fsm.event(machine, state, input) do
+          # successful transition: store the machine's new state
           {:ok, {next_state, output_value}} ->
             :ok = set_state(operator, next_state)
             {:ok, {next_state, output_value}}

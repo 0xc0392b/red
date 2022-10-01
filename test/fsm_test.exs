@@ -196,7 +196,7 @@ defmodule FSMTest.OperatorTest do
 
     # input "1", check new state
     {:ok, {next_state, output_value}} =
-      FSMTest.Operator.handle_input(
+      FSMTest.Operator.input(
         pid,
         1
       )
