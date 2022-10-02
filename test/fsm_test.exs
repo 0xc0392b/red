@@ -1,19 +1,19 @@
 # example state A
-defmodule FSMTest.State.A do
+defmodule FSMTest.Machine1.State.A do
   use State,
-    id: :a,
+    name: :a,
     to: [:a, :b],
     substates: []
 
   @impl true
   def transition(input, _) do
     cond do
-      # when input > 10 transition to error state
+      # on 2 go back to a
+      input == 2 -> {:ok, :a}
+      # on 1 go to b
+      input == 1 -> {:ok, :b}
+      # if input > 10 then error
       input > 10 -> :error
-      # when input is even transition to state a
-      rem(input, 2) == 0 -> {:ok, :a}
-      # when input is odd transition to state b
-      rem(input, 2) != 0 -> {:ok, :b}
     end
   end
 
@@ -23,23 +23,21 @@ defmodule FSMTest.State.A do
 end
 
 # example state B
-defmodule FSMTest.State.B do
+defmodule FSMTest.Machine1.State.B do
   use State,
-    id: :b,
+    name: :b,
     to: [:b, :c],
     substates: []
 
   @impl true
   def transition(input, _) do
     cond do
-      # when input > 20 transition to error state
-      input > 20 -> :error
-      # when input is even transition to state c
-      rem(input, 2) == 0 -> {:ok, :c}
-      # when input is odd transition to state b
-      rem(input, 2) != 0 -> {:ok, :b}
-      # when input is 420 transition to state x
-      input == 420 -> {:ok, :x}
+      # on 4 go back to b
+      input == 4 -> {:ok, :b}
+      # on 3 go to c
+      input == 3 -> {:ok, :c}
+      # if input > 10 then error
+      input > 10 -> :error
     end
   end
 
@@ -49,21 +47,19 @@ defmodule FSMTest.State.B do
 end
 
 # example state C
-defmodule FSMTest.State.C do
+defmodule FSMTest.Machine1.State.C do
   use State,
-    id: :c,
-    to: [:c, :a],
+    name: :c,
+    to: [:a],
     substates: []
 
   @impl true
   def transition(input, _) do
     cond do
-      # when input > 30 transition to error state
-      input > 30 -> :error
-      # when input is even transition to state c
-      rem(input, 2) == 0 -> {:ok, :c}
-      # when input is odd transition to state a
-      rem(input, 2) != 0 -> {:ok, :a}
+      # on 2 goto a
+      input == 2 -> {:ok, :a}
+      # if input > 10 then error
+      input > 10 -> :error
     end
   end
 
